@@ -1,4 +1,7 @@
+#include <stdlib.h>
 #include "dictionary.h"
+
+
 
 int main(int argc, char *argv[]){
     //Load dictionary
@@ -21,8 +24,27 @@ int main(int argc, char *argv[]){
     for(int i = 0; i < num_misspelled; i++){
         printf("%s\n", misspelled[i]);
     }
-
     fclose(fp);
+
+    //free memory
+    hashmap_t current;
+    hashmap_t temp;
+    for(int i = 0; i < HASH_SIZE; i++){
+        if(hashtable[i] != NULL){
+            current = hashtable[i];
+            while (current != NULL){
+                temp = current->next;
+                free(current);
+                current = temp;
+            }
+
+        }
+    }
+    for(int i = 0; i < num_misspelled; i++){
+        free(misspelled[i]);
+    }
+
+
     
     return 0;
 }
