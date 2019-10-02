@@ -136,6 +136,19 @@ START_TEST(test_check_words_mixed)
 }
 END_TEST
 
+START_TEST(test_check_words_input_file_overflow)
+{
+    hashmap_t hashtable[HASH_SIZE];
+    load_dictionary(DICTIONARY, hashtable);
+    char *misspelled[MAX_MISSPELLED]; 
+    FILE *fp = fopen("test7.txt", "r");
+    int num_misspelled = check_words(fp, hashtable, misspelled);
+    ck_assert(num_misspelled == 2);
+    fclose(fp);
+    
+}
+END_TEST
+
 Suite *
 check_word_suite(void)
 {
@@ -147,7 +160,6 @@ check_word_suite(void)
     tcase_add_test(check_word_case, test_check_word_overflow);
     tcase_add_test(check_word_case, test_check_word_number);
     suite_add_tcase(suite, check_word_case);
-
     return suite;
 }
 
@@ -161,6 +173,7 @@ check_words_suite(void)
     tcase_add_test(check_words_case, test_check_words_normal);
     tcase_add_test(check_words_case, test_check_words_numbers);
     tcase_add_test(check_words_case, test_check_words_mixed);
+    tcase_add_test(check_words_case, test_check_words_input_file_overflow);
     suite_add_tcase(suite, check_words_case);
 
     return suite;
