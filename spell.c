@@ -7,6 +7,7 @@
 
 bool check_word(const char* word, hashmap_t hashtable[]){
     if(strlen(word) > LENGTH){return false;}
+    if(word == NULL){return false;}
 
 
     //Check if word is number, if so return true
@@ -52,48 +53,84 @@ bool check_word(const char* word, hashmap_t hashtable[]){
     return false;
 }
 
+char* read_in_long_strings(FILE* fp, char* temp_word){
+    int index = LENGTH + 1;
+    char c;
+    while((c = fgetc(fp)) != EOF && !isspace(c)){
+        temp_word[index] = c;
+        index++;
+    }
+    temp_word[index] = '\0';
+    return temp_word;
+}
 
 
 int check_words(FILE* fp, hashmap_t hashtable[], char* misspelled[]){
+    if(fp == NULL){return -1;}
+    if(hashtable == NULL){return -1;}
+    bool is_hashtable_empty = true;
+    for(int i = 0; i < HASH_SIZE; i++){
+        if(hashtable[i] != NULL){is_hashtable_empty = false;}
+    }
+    if(is_hashtable_empty){return -1;}
+
+    
     //Set int num_misspelled to 0.
     int num_misspelled = 0;
 
     char c;
     char word[LENGTH];
+    for(int i = 0; i < LENGTH; i++){
+        word[i] = '\0';
+    }
     int index = 0;
-    int num_of_non_alpha_char = 0;
-    int num_of_digits = 0;
+    char temp_word[1000000];
+    bool is_temp_word_used = false;
     //While line in fp is not EOF (end of file):
     while((c = fgetc(fp)) != EOF){
-        if(strlen(word) == 0){
-            if(!isspace(c)){
-                word[0] = c;
-                index = 1;
-                if(!isalpha(c)){num_of_non_alpha_char++;}
-                if(isdigit(c)){num_of_digits++;}
-            }
-        }else{
-            if(isspace(c)){
-                //if word is not a number
-                if(strlen(word) != num_of_digits){
-                    if(num_of_non_alpha_char > 0){
-                        //Remove non alpha from beginning and end of word.
-                        int begin_index = 0;
-                        while(!isalpha(word[begin_index])){begin_index++;}
-                        int end_index = strlen(word) - 1;
-                        while(!isalpha(word[end_index])){end_index--;}
-                        char filtered_word[LENGTH];
-                        int j = 0;
-                        for(int i = begin_index; i <= end_index; i++){
-                            filtered_word[j] = word[i];
-                            j++;
-                        }
-                        filtered_word[j] = '\0';
-                        strncpy(word, filtered_word, LENGTH);
-                        word[j] = '\0';
-                    }else{
-                        word[index] = '\0';
+        if(isspace(c) && index != 0){
+            if(is_temp_word_used){
+                //Remove non alpha from beginning and end of word.
+                int begin_index = 0;
+                while((begin_index < strlen(temp_word) - 1) && !isalpha(temp_word[begin_index])){begin_index++;}
+                int end_index = strlen(temp_word) - 1;
+                while((end_index > -1) && !isalpha(temp_word[end_index])){end_index--;}
+                if(end_index - begin_index > -1){
+                    char filtered_word[sizeof(temp_word)];
+                    int j = 0;
+                    for(int i = begin_index; i <= end_index; i++){
+                        filtered_word[j] = temp_word[i];
+                        j++;
                     }
+                    filtered_word[j] = '\0';
+                    strncpy(temp_word, filtered_word, sizeof(temp_word));
+                    
+                    //If not check_word(word):
+                    if(!check_word(temp_word, hashtable)){
+                        //Append word to misspelled.
+                        misspelled[num_misspelled] = malloc(sizeof(temp_word));
+                        strncpy(misspelled[num_misspelled], temp_word, sizeof(temp_word));
+                        //Increment num_misspelled.
+                        num_misspelled++;
+                    }
+                    is_temp_word_used = false;
+                }
+            }else{
+                //Remove non alpha from beginning and end of word.
+                int begin_index = 0;
+                while((begin_index < LENGTH - 1) && !isalpha(word[begin_index])){begin_index++;}
+                int end_index = strlen(word) - 1;
+                while((end_index > -1) && !isalpha(word[end_index])){end_index--;}
+                if(end_index - begin_index > -1){
+                    char filtered_word[LENGTH];
+                    int j = 0;
+                    for(int i = begin_index; i <= end_index; i++){
+                        filtered_word[j] = word[i];
+                        j++;
+                    }
+                    filtered_word[j] = '\0';
+                    strncpy(word, filtered_word, LENGTH);
+                    
                     //If not check_word(word):
                     if(!check_word(word, hashtable)){
                         //Append word to misspelled.
@@ -103,20 +140,77 @@ int check_words(FILE* fp, hashmap_t hashtable[], char* misspelled[]){
                         num_misspelled++;
                     }
                 }
-                //clear string
-                int len_of_word = strlen(word);
-                for(int i = 0; i < len_of_word; i++){
-                    word[i] = '\0';
-                }
-                index = 0;
-                num_of_non_alpha_char = 0;
-                num_of_digits = 0;
+            }
+            for(int i = 0; i < LENGTH; i++){
+                word[i] = '\0';
+            }
+            index = 0;
+        }else if(!(isspace(c))){
+            if(index == LENGTH){
+                strncpy(temp_word, word, LENGTH);
+                temp_word[index] = c;
+                index++; 
+                read_in_long_strings(fp, temp_word);
             }else{
                 word[index] = c;
                 index++;
-                if(!isalpha(c)){num_of_non_alpha_char++;}
-                if(isdigit(c)){num_of_digits++;}
-            }  
+            }
+            
+            
+        }        
+    }
+    
+    if(is_temp_word_used){
+        //Remove non alpha from beginning and end of word.
+        int begin_index = 0;
+        while((begin_index < strlen(temp_word) - 1) && !isalpha(temp_word[begin_index])){begin_index++;}
+        int end_index = strlen(temp_word) - 1;
+        while((end_index > -1) && !isalpha(temp_word[end_index])){end_index--;}
+        if(end_index - begin_index > -1){
+            char filtered_word[sizeof(temp_word)];
+            int j = 0;
+            for(int i = begin_index; i <= end_index; i++){
+                filtered_word[j] = temp_word[i];
+                j++;
+            }
+            filtered_word[j] = '\0';
+            strncpy(temp_word, filtered_word, sizeof(temp_word));
+            
+            //If not check_word(word):
+            if(!check_word(temp_word, hashtable)){
+                //Append word to misspelled.
+                misspelled[num_misspelled] = malloc(sizeof(temp_word));
+                strncpy(misspelled[num_misspelled], temp_word, sizeof(temp_word));
+                //Increment num_misspelled.
+                num_misspelled++;
+            }
+            is_temp_word_used = false;
+        }
+    }
+    //check remaining word if there is one
+    if(strlen(word) > 0){
+        //Remove non alpha from beginning and end of word.
+        int begin_index = 0;
+        while((begin_index < LENGTH - 1) && !isalpha(word[begin_index])){begin_index++;}
+        int end_index = strlen(word) - 1;
+        while((end_index > -1) && !isalpha(word[end_index])){end_index--;}
+        if(end_index - begin_index > -1){
+            char filtered_word[LENGTH];
+            int j = 0;
+            for(int i = begin_index; i <= end_index; i++){
+                filtered_word[j] = word[i];
+                j++;
+            }
+            filtered_word[j] = '\0';
+            strncpy(word, filtered_word, LENGTH);
+            //If not check_word(word):
+            if(!check_word(word, hashtable)){
+                //Append word to misspelled.
+                misspelled[num_misspelled] = malloc(LENGTH);
+                strncpy(misspelled[num_misspelled], word, LENGTH);
+                //Increment num_misspelled.
+                num_misspelled++;
+            }
         }
     }
     
